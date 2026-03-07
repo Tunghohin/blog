@@ -1,0 +1,22 @@
+[Unit]
+Description=Blog API Backend
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/blog
+Environment=DATABASE_URL=sqlite:/opt/blog/data/blog.db?mode=rwc
+Environment=RUST_LOG=info
+ExecStart=/opt/blog/bin/blog-backend
+Restart=always
+RestartSec=10
+StandardOutput=append:/opt/blog/logs/api.log
+StandardError=append:/opt/blog/logs/api.error.log
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

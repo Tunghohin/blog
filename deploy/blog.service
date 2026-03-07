@@ -1,0 +1,17 @@
+[Unit]
+Description=Blog Frontend (Nginx)
+After=network.target blog-api.service
+Wants=blog-api.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/blog
+ExecStart=/usr/sbin/nginx -c /opt/blog/nginx.conf -g 'daemon off;'
+Restart=always
+RestartSec=5
+StandardOutput=append:/opt/blog/logs/nginx.log
+StandardError=append:/opt/blog/logs/nginx.error.log
+
+[Install]
+WantedBy=multi-user.target
