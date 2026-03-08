@@ -50,9 +50,10 @@ jobs:
         SSH_PRIVATE_KEY: ${{ secrets.ECS_SSH_KEY }}
         REMOTE_HOST: ${{ secrets.ECS_HOST }}
         REMOTE_USER: ${{ secrets.ECS_USER }}
-        REMOTE_PORT: 22
-        SOURCE: blog-release.tar.gz
-        TARGET: /tmp
+        REMOTE_PORT: "22"
+        SOURCE: "blog-release.tar.gz"
+        TARGET: "/tmp"
+        ARGS: "-rltgoDzvO"
         SCRIPT_AFTER: |
           echo "Extracting release..."
           mkdir -p /opt/blog/backend/target/release
