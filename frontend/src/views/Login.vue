@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { authApi } from '../api'
 import Header from '../components/Header.vue'
 
 const router = useRouter()
@@ -34,11 +33,7 @@ const handleSubmit = async () => {
   try {
     if (isLogin.value) {
       // 登录
-      const res = await authApi.login(form.value.username, form.value.password)
-      authStore.setUser({
-        username: res.data.username,
-        role: res.data.role,
-      })
+      await authStore.login(form.value.username, form.value.password)
       router.push('/')
     } else {
       // 注册
@@ -46,11 +41,7 @@ const handleSubmit = async () => {
         error.value = '两次输入的密码不一致'
         return
       }
-      const res = await authApi.register(form.value.username, form.value.password)
-      authStore.setUser({
-        username: res.data.username,
-        role: res.data.role,
-      })
+      await authStore.register(form.value.username, form.value.password)
       success.value = '注册成功！正在跳转...'
       setTimeout(() => router.push('/'), 1000)
     }
