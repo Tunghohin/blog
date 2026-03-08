@@ -81,6 +81,7 @@ pub async fn get_post(
 
 pub async fn create_post(
     State(state): State<Arc<AppState>>,
+    Extension(user_id): Extension<i32>,
     Extension(_username): Extension<String>,
     Extension(role): Extension<String>,
     Json(req): Json<CreatePostRequest>,
@@ -92,7 +93,7 @@ pub async fn create_post(
 
     let new_post = post::ActiveModel {
         id: sea_orm::ActiveValue::NotSet,
-        author_id: sea_orm::ActiveValue::NotSet,
+        author_id: sea_orm::ActiveValue::Set(user_id),
         title: sea_orm::ActiveValue::Set(req.title),
         slug: sea_orm::ActiveValue::Set(req.slug),
         content: sea_orm::ActiveValue::Set(req.content),

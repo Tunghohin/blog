@@ -14,8 +14,10 @@ export const useAuthStore = defineStore('auth', () => {
     const { token: newToken, username: name, role } = res.data
 
     token.value = newToken
-    user.value = { username: name, role }
+    const userData = { username: name, role }
+    user.value = userData
     localStorage.setItem('token', newToken)
+    localStorage.setItem('user', JSON.stringify(userData))
 
     return res.data
   }
@@ -25,8 +27,10 @@ export const useAuthStore = defineStore('auth', () => {
     const { token: newToken, username: name, role } = res.data
 
     token.value = newToken
-    user.value = { username: name, role }
+    const userData = { username: name, role }
+    user.value = userData
     localStorage.setItem('token', newToken)
+    localStorage.setItem('user', JSON.stringify(userData))
 
     return res.data
   }
@@ -35,6 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     user.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
   }
 
   // 初始化时尝试从 localStorage 恢复用户信息

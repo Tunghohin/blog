@@ -10,7 +10,12 @@ use std::sync::Arc;
 
 use crate::AppState;
 
-const SECRET_KEY: &str = "your-secret-key-change-in-production";
+fn get_secret_key() -> String {
+    std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+        eprintln!("WARNING: Using default JWT secret. Set JWT_SECRET env var in production!");
+        "default-secret-key-change-in-production".to_string()
+    })
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -38,7 +43,7 @@ pub async fn auth_middleware(
     let config = Validation::default();
     match decode::<Claims>(
         token,
-        &DecodingKey::from_secret(SECRET_KEY.as_bytes()),
+        &DecodingKey::from_secret(get_secret_key().as_bytes()),
         &config,
     ) {
         Ok(token_data) => {
@@ -70,6 +75,6 @@ pub fn create_token(user_id: i32, username: String, role: String) -> Result<Stri
     jsonwebtoken::encode(
         &jsonwebtoken::Header::default(),
         &claims,
-        &jsonwebtoken::EncodingKey::from_secret(SECRET_KEY.as_bytes()),
+        &jsonwebtoken::EncodingKey::from_secret(get_secret_key().as_bytes()),
     )
 }

@@ -5,8 +5,7 @@ Wants=blog-api.service
 
 [Service]
 Type=simple
-User=www-data
-WorkingDirectory=/opt/blog
+User=root
 ExecStart=/usr/sbin/nginx -c /etc/nginx/nginx.conf -g 'daemon off;'
 Restart=always
 RestartSec=5

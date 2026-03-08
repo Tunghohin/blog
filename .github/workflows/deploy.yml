@@ -61,7 +61,10 @@ jobs:
           echo "::error::ECS_SSH_KEY secret is empty!"
           exit 1
         fi
-        echo "All secrets loaded successfully!"
+        if [ -z "${{ secrets.JWT_SECRET }}" ]; then
+          echo "::warning::JWT_SECRET not set, will use default (insecure for production!)"
+        fi
+        echo "All required secrets loaded successfully!"
 
     - name: Deploy to ECS via SSH
       uses: easingthemes/ssh-deploy@main
@@ -79,8 +82,15 @@ jobs:
           mkdir -p /opt/blog/logs
           tar -xzf /tmp/blog-release.tar.gz -C /opt/blog
 
+          echo "Setting permissions..."
+          chmod +x /opt/blog/backend/target/release/blog-backend
+
           echo "Installing systemd services..."
-          cp /opt/blog/deploy/blog-api.service /etc/systemd/system/
+          JWT_SECRET="${{ secrets.JWT_SECRET }}"
+          if [ -z "$JWT_SECRET" ]; then
+            JWT_SECRET="default-secret-key-change-in-production"
+          fi
+          sed "s/\${JWT_SECRET}/$JWT_SECRET/g" /opt/blog/deploy/blog-api.service > /etc/systemd/system/blog-api.service
           cp /opt/blog/deploy/blog.service /etc/systemd/system/
 
           echo "Setting up Nginx..."
@@ -93,6 +103,10 @@ jobs:
           systemctl enable blog-api
           systemctl restart blog || systemctl start blog
           systemctl enable blog
+
+          echo "Waiting for service to start..."
+          sleep 3
+          systemctl status blog-api --no-pager || true
 
           echo "Cleanup..."
           rm -f /tmp/blog-release.tar.gz

@@ -30,6 +30,13 @@ const handleSubmit = async () => {
   error.value = ''
   success.value = ''
 
+  // 注册时检查密码是否一致
+  if (!isLogin.value && form.value.password !== form.value.confirmPassword) {
+    error.value = '两次输入的密码不一致'
+    loading.value = false
+    return
+  }
+
   try {
     if (isLogin.value) {
       // 登录
@@ -37,10 +44,6 @@ const handleSubmit = async () => {
       router.push('/')
     } else {
       // 注册
-      if (form.value.password !== form.value.confirmPassword) {
-        error.value = '两次输入的密码不一致'
-        return
-      }
       await authStore.register(form.value.username, form.value.password)
       success.value = '注册成功！正在跳转...'
       setTimeout(() => router.push('/'), 1000)

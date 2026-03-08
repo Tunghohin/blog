@@ -50,10 +50,10 @@ pub async fn login(
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    // 管理员账号判断：用户名为 Tunghohin 则为 admin
-    let role = if user.username == "Tunghohin" { "admin" } else { "normal" };
+    // 使用数据库中存储的 role 字段
+    let role = user.role.clone();
 
-    let token = create_token(user.id, user.username.clone(), role.to_string())
+    let token = create_token(user.id, user.username.clone(), role.clone())
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(LoginResponse {
@@ -70,14 +70,14 @@ pub async fn register(
     let password_hash = bcrypt::hash(&req.password, bcrypt::DEFAULT_COST)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // 管理员账号判断：用户名为 Tunghohin 则为 admin，其他为 normal
-    let role = if req.username == "Tunghohin" { "admin" } else { "normal" };
+    // 新注册用户默认为 normal 角色，admin 只能通过数据库或 init-db 命令创建
+    let role = "normal".to_string();
 
     let user = user::ActiveModel {
         id: sea_orm::ActiveValue::NotSet,
         username: sea_orm::ActiveValue::Set(req.username.clone()),
         password_hash: sea_orm::ActiveValue::Set(password_hash),
-        role: sea_orm::ActiveValue::Set(role.to_string()),
+        role: sea_orm::ActiveValue::Set(role.clone()),
         created_at: sea_orm::ActiveValue::NotSet,
     };
 
@@ -86,12 +86,12 @@ pub async fn register(
         .await
         .map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let token = create_token(user.id, user.username.clone(), role.to_string())
+    let token = create_token(user.id, user.username.clone(), role.clone())
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(LoginResponse {
         token,
         username: user.username,
-        role: role.to_string(),
+        role,
     }))
 }

@@ -4,19 +4,16 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
-WorkingDirectory=/opt/blog
+User=root
+WorkingDirectory=/opt/blog/backend
 Environment=DATABASE_URL=sqlite:/opt/blog/backend/blog.db?mode=rwc
 Environment=RUST_LOG=info
+Environment=JWT_SECRET=${JWT_SECRET}
 ExecStart=/opt/blog/backend/target/release/blog-backend
 Restart=always
 RestartSec=10
 StandardOutput=append:/opt/blog/logs/api.log
 StandardError=append:/opt/blog/logs/api.error.log
-
-# 安全设置
-NoNewPrivileges=true
-PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

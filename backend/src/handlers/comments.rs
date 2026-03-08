@@ -78,6 +78,7 @@ pub async fn create_comment(
 pub async fn delete_comment(
     State(state): State<Arc<AppState>>,
     Extension(user_id): Extension<i32>,
+    Extension(role): Extension<String>,
     Path(id): Path<i32>,
 ) -> Result<(), StatusCode> {
     let comment: comment::ActiveModel = comment::Entity::find_by_id(id)
@@ -87,11 +88,11 @@ pub async fn delete_comment(
         .ok_or(StatusCode::NOT_FOUND)?
         .into();
 
-    // 只有评论作者可以删除自己的评论
+    // 评论作者或管理员可以删除评论
     let comment_model = comment.clone().try_into_model()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if comment_model.author_id != user_id {
+    if comment_model.author_id != user_id && role != "admin" {
         return Err(StatusCode::FORBIDDEN);
     }
 
