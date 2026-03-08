@@ -45,13 +45,16 @@ const handleLogout = () => {
           <RouterLink v-if="isAdmin" to="/editor" class="btn btn-primary">
             写文章
           </RouterLink>
+          <span class="user-name">{{ authStore.user?.username }}</span>
           <button @click="handleLogout" class="btn btn-secondary">
             退出
           </button>
         </template>
-        <RouterLink v-else to="/login" class="btn btn-primary">
-          登录
-        </RouterLink>
+        <template v-else>
+          <RouterLink to="/login" class="btn btn-primary">
+            登录
+          </RouterLink>
+        </template>
       </div>
     </div>
   </header>
@@ -129,5 +132,20 @@ const handleLogout = () => {
 
 .btn-primary:hover {
   background-color: #2563eb;
+}
+
+.btn-secondary {
+  background-color: #333;
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background-color: #444;
+}
+
+.user-name {
+  color: #ccc;
+  font-size: 0.9rem;
+  margin-right: 0.5rem;
 }
 </style>

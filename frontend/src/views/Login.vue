@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { authApi } from '../api'
@@ -8,32 +8,64 @@ import Header from '../components/Header.vue'
 const router = useRouter()
 const authStore = useAuthStore()
 
+const isLogin = ref(true)
+
 const form = ref({
   username: '',
   password: '',
+  confirmPassword: '',
 })
 
 const error = ref('')
+const success = ref('')
 const loading = ref(false)
+
+const isFormValid = computed(() => {
+  if (!form.value.username || !form.value.password) return false
+  if (!isLogin.value && form.value.password !== form.value.confirmPassword) return false
+  return true
+})
 
 const handleSubmit = async () => {
   loading.value = true
   error.value = ''
+  success.value = ''
 
   try {
-    const res = await authApi.login(form.value.username, form.value.password)
-    // 保存用户信息到 store
-    authStore.setUser({
-      username: res.data.username,
-      role: res.data.role,
-    })
-    router.push('/')
+    if (isLogin.value) {
+      // 登录
+      const res = await authApi.login(form.value.username, form.value.password)
+      authStore.setUser({
+        username: res.data.username,
+        role: res.data.role,
+      })
+      router.push('/')
+    } else {
+      // 注册
+      if (form.value.password !== form.value.confirmPassword) {
+        error.value = '两次输入的密码不一致'
+        return
+      }
+      const res = await authApi.register(form.value.username, form.value.password)
+      authStore.setUser({
+        username: res.data.username,
+        role: res.data.role,
+      })
+      success.value = '注册成功！正在跳转...'
+      setTimeout(() => router.push('/'), 1000)
+    }
   } catch (err) {
-    error.value = '登录失败，请检查用户名和密码'
+    error.value = isLogin.value ? '登录失败，请检查用户名和密码' : '注册失败，用户名可能已存在'
     console.error(err)
   } finally {
     loading.value = false
   }
+}
+
+const toggleMode = () => {
+  isLogin.value = !isLogin.value
+  error.value = ''
+  success.value = ''
 }
 </script>
 
@@ -43,11 +75,12 @@ const handleSubmit = async () => {
 
     <main class="main">
       <div class="container">
-        <div class="login-card">
-          <h1 class="title">登录</h1>
+        <div class="auth-card">
+          <h1 class="title">{{ isLogin ? '登录' : '注册' }}</h1>
 
-          <form @submit.prevent="handleSubmit" class="login-form">
+          <form @submit.prevent="handleSubmit" class="auth-form">
             <div v-if="error" class="error">{{ error }}</div>
+            <div v-if="success" class="success">{{ success }}</div>
 
             <div class="form-group">
               <label>用户名</label>
@@ -65,7 +98,18 @@ const handleSubmit = async () => {
               <input
                 v-model="form.password"
                 type="password"
-                placeholder="输入密码"
+                :placeholder="isLogin ? '输入密码' : '设置密码'"
+                required
+                class="input"
+              />
+            </div>
+
+            <div v-if="!isLogin" class="form-group">
+              <label>确认密码</label>
+              <input
+                v-model="form.confirmPassword"
+                type="password"
+                placeholder="再次输入密码"
                 required
                 class="input"
               />
@@ -74,11 +118,18 @@ const handleSubmit = async () => {
             <button
               type="submit"
               class="btn btn-primary btn-full"
-              :disabled="loading"
+              :disabled="loading || !isFormValid"
             >
-              {{ loading ? '登录中...' : '登录' }}
+              {{ loading ? '处理中...' : (isLogin ? '登录' : '注册') }}
             </button>
           </form>
+
+          <div class="toggle-hint">
+            <span>{{ isLogin ? '还没有账号？' : '已有账号？' }}</span>
+            <button @click="toggleMode" class="toggle-btn">
+              {{ isLogin ? '立即注册' : '去登录' }}
+            </button>
+          </div>
         </div>
       </div>
     </main>
@@ -101,7 +152,7 @@ const handleSubmit = async () => {
   padding: 2rem 1.5rem;
 }
 
-.login-card {
+.auth-card {
   background-color: #1e1e1e;
   border: 1px solid #333;
   border-radius: 8px;
@@ -115,7 +166,7 @@ const handleSubmit = async () => {
   text-align: center;
 }
 
-.login-form {
+.auth-form {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -181,5 +232,37 @@ const handleSubmit = async () => {
   color: #ef4444;
   padding: 0.75rem;
   border-radius: 6px;
+}
+
+.success {
+  background-color: rgba(34, 197, 94, 0.2);
+  border: 1px solid #22c55e;
+  color: #22c55e;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.toggle-hint {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #333;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+  transition: color 0.2s;
+}
+
+.toggle-btn:hover {
+  color: #2563eb;
+  text-decoration: underline;
 }
 </style>

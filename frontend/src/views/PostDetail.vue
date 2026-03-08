@@ -99,7 +99,7 @@ onMounted(async () => {
 
         <!-- 评论区 -->
         <div v-if="post" class="comments-section">
-          <h2 class="comments-title">评论</h2>
+          <h2 class="comments-title">评论 ({{ comments.length }})</h2>
 
           <!-- 发表评论 -->
           <div v-if="isAuthenticated" class="comment-form">
@@ -120,7 +120,7 @@ onMounted(async () => {
 
           <div v-else class="login提示">
             <RouterLink to="/login" class="btn btn-primary">登录</RouterLink>
-            <span>后发表评论</span>
+            <p>需要登录后才能发表评论</p>
           </div>
 
           <!-- 评论列表 -->
@@ -139,7 +139,7 @@ onMounted(async () => {
               <div class="comment-content">{{ comment.content }}</div>
             </div>
             <div v-if="comments.length === 0" class="no-comments">
-              暂无评论
+              暂无评论，快来抢沙发吧
             </div>
           </div>
         </div>

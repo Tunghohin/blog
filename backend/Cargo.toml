@@ -31,6 +31,9 @@ thiserror = "1"
 anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive"] }
+rpassword = "7"
+atty = "0.2"
 
 # 开发环境
 [dev-dependencies]

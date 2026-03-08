@@ -70,7 +70,6 @@ pub async fn init_db(db: &Db) -> Result<(), DbErr> {
     ))
     .await?;
 
-    // 创建 comments 表
     db.execute(Statement::from_string(
         sea_orm::DatabaseBackend::Sqlite,
         r#"
@@ -84,6 +83,26 @@ pub async fn init_db(db: &Db) -> Result<(), DbErr> {
             FOREIGN KEY (author_id) REFERENCES users(id)
         )
         "#,
+    ))
+    .await?;
+
+    Ok(())
+}
+
+/// 创建管理员账号
+pub async fn create_admin(db: &Db, username: &str, password: &str) -> Result<(), DbErr> {
+    let password_hash = bcrypt::hash(password, bcrypt::DEFAULT_COST)
+        .map_err(|_| DbErr::Custom("Failed to hash password".to_string()))?;
+
+    db.execute(Statement::from_string(
+        sea_orm::DatabaseBackend::Sqlite,
+        format!(
+            r#"
+            INSERT OR IGNORE INTO users (username, password_hash, role)
+            VALUES ('{}', '{}', 'admin')
+            "#,
+            username, password_hash
+        ),
     ))
     .await?;
 

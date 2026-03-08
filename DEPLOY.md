@@ -191,6 +191,46 @@ crontab -e
 
 ---
 
+## 第七步：初始化数据库和管理员账号
+
+SSH 登录 ECS：
+```bash
+ssh root@<ECS-IP>
+```
+
+进入后端目录并运行初始化命令：
+
+**方式一：交互式（推荐）**
+```bash
+cd /opt/blog/backend
+
+# 停止服务（如果在运行）
+systemctl stop blog-api
+
+# 初始化数据库并创建管理员账号
+cargo run -- init-db
+```
+
+交互式输入：
+```
+Enter admin username (default: admin): Tunghohin
+Enter admin password: ********
+Confirm admin password: ********
+Admin user 'Tunghohin' created successfully!
+```
+
+**方式二：非交互式（脚本）**
+```bash
+echo -e "你的密码\n你的密码" | cargo run -- init-db --username Tunghohin
+```
+
+然后重启服务：
+```bash
+systemctl start blog-api
+```
+
+---
+
 ## 故障排查
 
 ### 后端无法启动
