@@ -2,167 +2,163 @@
 
 ## 前置准备
 
-1. **购买 ECS 实例**
-   - 推荐配置：2 核 4G 或以上
-   - 系统：Ubuntu 22.04 LTS 或 Debian 12
+### 1. ECS 实例配置
+- **系统**: Ubuntu 22.04 LTS
+- **配置**: 2 核 4G 或以上
+- **安全组**: 开放端口 80 (HTTP), 443 (HTTPS), 22 (SSH)
 
-2. **配置安全组**
-   - 开放端口：80 (HTTP), 443 (HTTPS), 22 (SSH)
+### 2. GitHub Secrets 配置
 
----
+在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加：
 
-## 方案一：Docker 部署（推荐）
+| Secret 名称 | 值 |
+|-----------|-----|
+| `ECS_HOST` | ECS 公网 IP，如 `1.2.3.4` |
+| `ECS_USER` | SSH 用户名，如 `root` |
+| `ECS_SSH_KEY` | SSH 私钥（见下方生成步骤）|
 
-### 1. 安装 Docker
-
-```bash
-# SSH 登录服务器
-ssh root@<your-ecs-ip>
-
-# 安装 Docker
-curl -fsSL https://get.docker.com | bash -s docker
-
-# 安装 docker-compose
-apt install docker-compose -y
-
-# 验证安装
-docker --version
-docker-compose --version
-```
-
-### 2. 上传代码
+### 3. 生成 SSH 密钥（可选）
 
 ```bash
-# 方法 1: git clone
-git clone <your-repo> /opt/blog
-cd /opt/blog
+# 生成专用密钥
+ssh-keygen -t ed25519 -f ~/.ssh/github-ecs -N ""
 
-# 方法 2: scp 上传
-scp -r ./* root@<your-ecs-ip>:/opt/blog
-```
+# 复制公钥到 ECS
+ssh-copy-id -i ~/.ssh/github-ecs.pub root@<ECS-IP>
 
-### 3. 构建并启动
-
-```bash
-cd /opt/blog
-
-# 构建镜像
-make docker-build
-
-# 启动服务
-make docker-up
-
-# 查看日志
-make docker-logs
-```
-
-### 4. 停止/重启
-
-```bash
-make docker-down      # 停止
-make docker-restart   # 重启
+# 添加私钥到 GitHub Secrets
+cat ~/.ssh/github-ecs | pbcopy  # macOS
+# 或
+cat ~/.ssh/github-ecs | xclip -selection clipboard  # Linux
 ```
 
 ---
 
-## 方案二：systemd 部署
+## 部署流程
 
-### 1. 安装依赖
+### 第一步：ECS 初始化（只需一次）
 
+SSH 登录 ECS：
 ```bash
-# 更新源
-apt update
+ssh root@<ECS-IP>
+```
 
-# 安装 Node.js
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt install -y nodejs
-
-# 安装 Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
+安装运行环境：
+```bash
+# 更新系统
+apt update && apt upgrade -y
 
 # 安装 Nginx
 apt install -y nginx
+
+# 创建目录
+mkdir -p /opt/blog
+
+# 设置权限
+chown -R root:root /opt/blog
+chmod -R 755 /opt/blog
 ```
 
-### 2. 上传并构建
+### 第二步：手动拉取代码（首次）
+
+```bash
+cd /opt
+git clone https://github.com/你的用户名/你的仓库.git blog
+chown -R root:root /opt/blog
+```
+
+### 第三步：配置 GitHub Actions（自动部署）
+
+每次 `git push` 后自动：
+1. GitHub Actions 编译后端和前端
+2. 上传编译产物到 ECS
+3. 自动重启服务
+
+查看构建状态：https://github.com/你的用户名/你的仓库/actions
+
+---
+
+## 手动部署（可选）
+
+如果不想用 GitHub Actions，可以手动：
+
+### 本地构建 + 上传
+
+```bash
+# 本地执行（需要 Rust + Node.js）
+ECS_HOST=1.2.3.4 ./scripts/build-and-deploy.sh
+
+# SSH 到 ECS 执行后续命令
+ssh root@1.2.3.4
+```
+
+### ECS 上执行
 
 ```bash
 cd /opt/blog
-
-# 构建
-make deploy-build
+tar -xzf /tmp/blog-release.tar.gz -C /opt/blog
 
 # 配置 systemd
-make deploy-setup
-```
+cp /opt/blog/deploy/blog-api.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable blog-api
+systemctl start blog-api
 
-### 3. 启动服务
-
-```bash
-make deploy-start
-
-# 查看状态
-make deploy-status
-
-# 查看日志
-make deploy-logs
+# 配置 Nginx
+cp /opt/blog/deploy/nginx.conf /etc/nginx/nginx.conf
+systemctl restart nginx
 ```
 
 ---
 
-## 域名和 HTTPS（可选）
-
-### 1. 域名解析
-
-在阿里云 DNS 控制台添加 A 记录：
-- 主机记录：`blog` 或 `@`
-- 记录值：`<ECS 公网 IP>`
-
-### 2. 申请 SSL 证书
+## 验证部署
 
 ```bash
-# 安装 certbot
-apt install certbot python3-certbot-nginx -y
+# 检查服务状态
+systemctl status blog-api
+systemctl status nginx
 
-# 申请证书
-certbot --nginx -d blog.yourdomain.com
+# 测试 API
+curl http://localhost/api/posts
+
+# 注册管理员
+curl -X POST http://localhost/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "你的密码"}'
 ```
 
-### 3. 自动续期
-
-```bash
-# 添加定时任务
-crontab -e
-# 添加：0 3 1 * * certbot renew --quiet
-```
-
----
-
-## 数据库备份
-
-```bash
-# 手动备份
-cp /opt/blog/data/blog.db /opt/blog/backup/blog-$(date +%Y%m%d).db
-
-# 定时备份（cron）
-0 2 * * * cp /opt/blog/data/blog.db /opt/blog/backup/blog-$(date +\%Y\%m\%d).db
-```
+访问 `http://<ECS 公网 IP>` 查看博客首页。
 
 ---
 
 ## 常用命令
 
+### 服务管理
 ```bash
-# Docker 方案
-docker-compose ps          # 查看状态
-docker-compose logs -f     # 查看日志
-docker-compose restart     # 重启
+systemctl start blog-api    # 启动
+systemctl stop blog-api     # 停止
+systemctl restart blog-api  # 重启
+systemctl status blog-api   # 状态
+```
 
-# systemd 方案
-systemctl status blog      # 查看状态
-journalctl -u blog -f      # 查看日志
-systemctl restart blog     # 重启
+### 日志查看
+```bash
+# API 日志
+journalctl -u blog-api -f
+
+# Nginx 日志
+tail -f /var/log/nginx/access.log
+tail -f /var/log/nginx/error.log
+```
+
+### 数据库备份
+```bash
+# 手动备份
+cp /opt/blog/backend/blog.db /opt/blog/backups/blog-$(date +%Y%m%d).db
+
+# 定时备份（每周日凌晨 3 点）
+crontab -e
+# 添加：0 3 * * 0 cp /opt/blog/backend/blog.db /opt/blog/backups/blog-$(date +\%Y\%m\%d).db
 ```
 
 ---
@@ -175,24 +171,24 @@ systemctl restart blog     # 重启
 netstat -tlnp | grep 3001
 
 # 查看日志
-tail -f /opt/blog/logs/api.error.log
+journalctl -u blog-api -n 50
 ```
 
-### 前端无法访问
+### Nginx 无法访问
 ```bash
-# 检查 Nginx 配置
+# 检查配置
 nginx -t
+
+# 重启 Nginx
+systemctl restart nginx
 
 # 检查端口
 netstat -tlnp | grep 80
 ```
 
-### 数据库问题
-```bash
-# 检查数据库文件
-ls -la /opt/blog/data/
-
-# 重置数据库（谨慎操作）
-rm /opt/blog/data/blog.db
-# 重启服务会自动创建
-```
+### GitHub Actions 失败
+- 查看 Actions 日志：https://github.com/你的用户名/你的仓库/actions
+- 常见问题：
+  - SSH 密钥权限不对 → `chmod 600 ~/.ssh/github-ecs`
+  - ECS_HOST 为空 → 检查 Secrets 配置
+  - 磁盘空间不足 → `df -h`

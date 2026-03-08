@@ -1,4 +1,4 @@
-.PHONY: help backend frontend start stop clean dev docker-build docker-up docker-down docker-logs deploy
+.PHONY: help backend frontend start stop clean dev build deploy-setup deploy-start deploy-stop deploy-status deploy-logs
 
 # 默认目标
 help:
@@ -11,19 +11,18 @@ help:
 	@echo "  make stop         - 停止所有服务"
 	@echo "  make dev          - 启动开发环境 (同时启动前后端)"
 	@echo "  make clean        - 清理构建文件"
-	@echo "  make build        - 构建项目"
 	@echo ""
-	@echo "=== Docker 部署 ==="
-	@echo "  make docker-build     - 构建 Docker 镜像"
-	@echo "  make docker-up        - 启动 Docker 容器"
-	@echo "  make docker-down      - 停止 Docker 容器"
-	@echo "  make docker-logs      - 查看容器日志"
-	@echo "  make docker-restart   - 重启容器"
+	@echo "=== 构建命令 ==="
+	@echo "  make build        - 构建项目 (后端 + 前端)"
+	@echo "  make build-backend    - 只构建后端"
+	@echo "  make build-frontend   - 只构建前端"
 	@echo ""
 	@echo "=== 生产部署 ==="
 	@echo "  make deploy-setup     - 配置 systemd 服务 (需要 sudo)"
 	@echo "  make deploy-start     - 启动生产服务"
 	@echo "  make deploy-stop      - 停止生产服务"
+	@echo "  make deploy-status    - 查看服务状态"
+	@echo "  make deploy-logs      - 查看服务日志"
 	@echo ""
 
 # 启动后端
@@ -31,7 +30,6 @@ backend:
 	@echo "启动后端服务..."
 	@cd backend && cargo run --release 2>&1 &
 	@echo "后端已启动：http://localhost:3001"
-	@echo "API 文档：http://localhost:3001/api"
 
 # 启动前端
 frontend:
@@ -53,6 +51,7 @@ start: backend
 # 开发模式（后台运行）
 dev:
 	@echo "启动开发环境..."
+	@mkdir -p logs
 	@cd backend && nohup cargo run --release > ../logs/backend.log 2>&1 & echo $$! > ../logs/backend.pid
 	@cd frontend && nohup npm run dev > ../logs/frontend.log 2>&1 & echo $$! > ../logs/frontend.pid
 	@sleep 3
@@ -67,7 +66,7 @@ stop:
 	@pkill -f "blog-backend" || true
 	@pkill -f "vite" || true
 	@pkill -f "node.*dev" || true
-	@-rm -f logs/*.pid 2>/dev/null || true
+	@rm -f logs/*.pid 2>/dev/null || true
 	@echo "所有服务已停止"
 
 # 重启服务
@@ -111,32 +110,6 @@ init-db:
 	@rm -f backend/blog.db
 	@echo "数据库已重置"
 
-# ==================== Docker 部署 ====================
-
-docker-build:
-	@echo "构建 Docker 镜像..."
-	@docker-compose build
-
-docker-up:
-	@echo "启动 Docker 容器..."
-	@docker-compose up -d
-	@echo "服务已启动!"
-	@echo "  前端：http://localhost:80"
-	@echo "  后端：http://localhost:3001"
-
-docker-down:
-	@echo "停止 Docker 容器..."
-	@docker-compose down
-
-docker-logs:
-	@docker-compose logs -f
-
-docker-restart:
-	@docker-compose restart
-
-docker-status:
-	@docker-compose ps
-
 # ==================== 生产部署 (systemd) ====================
 
 deploy-build:
@@ -150,7 +123,6 @@ deploy-setup: deploy-build
 	@sudo mkdir -p /opt/blog/{bin,data,logs}
 	@sudo cp backend/target/release/blog-backend /opt/blog/bin/
 	@sudo cp -r frontend/dist /opt/blog/html
-	@sudo cp deploy/blog.service /etc/systemd/system/
 	@sudo cp deploy/blog-api.service /etc/systemd/system/
 	@sudo systemctl daemon-reload
 	@echo "systemd 服务已配置!"
@@ -158,17 +130,16 @@ deploy-setup: deploy-build
 
 deploy-start:
 	@echo "启动生产服务..."
-	@sudo systemctl enable blog.service blog-api.service
-	@sudo systemctl start blog.service blog-api.service
+	@sudo systemctl enable blog-api
+	@sudo systemctl start blog-api
 	@echo "服务已启动!"
 
 deploy-stop:
 	@echo "停止生产服务..."
-	@sudo systemctl stop blog.service blog-api.service
+	@sudo systemctl stop blog-api
 
 deploy-status:
-	@sudo systemctl status blog.service blog-api.service
+	@sudo systemctl status blog-api
 
 deploy-logs:
-	@sudo journalctl -u blog.service -u blog-api.service -f
-
+	@sudo journalctl -u blog-api -f

@@ -1,0 +1,77 @@
+name: Build and Deploy to ECS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-action@stable
+
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y pkg-config libssl-dev
+
+    - name: Build Backend
+      run: |
+        cd backend
+        cargo build --release
+
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+
+    - name: Package release
+      run: |
+        tar -czf blog-release.tar.gz \
+          backend/target/release/blog-backend \
+          frontend/dist \
+          deploy/blog-api.service \
+          deploy/nginx.conf
+
+    - name: Deploy to ECS via SSH
+      uses: easingthemes/ssh-deploy@v4
+      with:
+        SSH_PRIVATE_KEY: ${{ secrets.ECS_SSH_KEY }}
+        REMOTE_HOST: ${{ secrets.ECS_HOST }}
+        REMOTE_USER: ${{ secrets.ECS_USER }}
+        REMOTE_PORT: 22
+        SOURCE: blog-release.tar.gz
+        TARGET: /tmp
+        SCRIPT_AFTER: |
+          echo "Extracting release..."
+          mkdir -p /opt/blog/backend/target/release
+          mkdir -p /opt/blog/frontend
+          tar -xzf /tmp/blog-release.tar.gz -C /opt/blog
+
+          echo "Setting up systemd..."
+          cp /opt/blog/deploy/blog-api.service /etc/systemd/system/ || true
+
+          echo "Setting up Nginx..."
+          cp /opt/blog/deploy/nginx.conf /etc/nginx/nginx.conf || true
+          nginx -t && systemctl restart nginx
+
+          echo "Starting services..."
+          systemctl daemon-reload
+          systemctl restart blog-api || systemctl start blog-api
+          systemctl enable blog-api
+
+          echo "Cleanup..."
+          rm -f /tmp/blog-release.tar.gz
+
+          echo "Deploy completed!"
