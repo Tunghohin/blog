@@ -7,7 +7,7 @@ use sea_orm::{EntityTrait, QueryOrder, ActiveModelTrait, QueryFilter, ColumnTrai
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::{AppState, models::comment};
+use crate::{AppState, models::{comment, user}};
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCommentRequest {
@@ -28,19 +28,20 @@ pub async fn list_comments(
     State(state): State<Arc<AppState>>,
     Path(post_id): Path<i32>,
 ) -> Json<Vec<CommentResponse>> {
-    let comments = comment::Entity::find()
+    // 查询评论并关联查询用户信息
+    let comments_with_users = comment::Entity::find()
         .filter(comment::Column::PostId.eq(post_id))
         .order_by_asc(comment::Column::CreatedAt)
+        .find_also_related(user::Entity)
         .all(&state.db)
         .await
         .unwrap_or_default();
 
-    // TODO: 关联查询用户名
-    Json(comments.into_iter().map(|c| CommentResponse {
+    Json(comments_with_users.into_iter().map(|(c, u)| CommentResponse {
         id: c.id,
         post_id: c.post_id,
         author_id: c.author_id,
-        author_name: format!("User{}", c.author_id),
+        author_name: u.map(|user| user.username).unwrap_or_else(|| format!("User{}", c.author_id)),
         content: c.content,
         created_at: c.created_at,
     }).collect())
@@ -49,6 +50,7 @@ pub async fn list_comments(
 pub async fn create_comment(
     State(state): State<Arc<AppState>>,
     Extension(user_id): Extension<i32>,
+    Extension(username): Extension<String>,
     Path(post_id): Path<i32>,
     Json(req): Json<CreateCommentRequest>,
 ) -> Result<Json<CommentResponse>, StatusCode> {
@@ -69,7 +71,7 @@ pub async fn create_comment(
         id: comment.id,
         post_id: comment.post_id,
         author_id: comment.author_id,
-        author_name: format!("User{}", comment.author_id),
+        author_name: username,
         content: comment.content,
         created_at: comment.created_at,
     }))

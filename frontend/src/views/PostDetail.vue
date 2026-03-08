@@ -133,7 +133,7 @@ onMounted(async () => {
               <div class="comment-header">
                 <span class="comment-author">{{ comment.author_name }}</span>
                 <span class="comment-date">
-                  {{ new Date(comment.created_at).toLocaleDateString('zh-CN') }}
+                  {{ new Date(comment.created_at).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}
                 </span>
               </div>
               <div class="comment-content">{{ comment.content }}</div>
