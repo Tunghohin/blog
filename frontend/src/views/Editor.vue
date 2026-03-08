@@ -1,11 +1,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import { postApi } from '../api'
 import Header from '../components/Header.vue'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
+
+const isAdmin = computed(() => authStore.isAdmin)
 
 const isEdit = computed(() => !!route.params.id)
 
@@ -21,6 +25,13 @@ const saving = ref(false)
 const error = ref('')
 
 onMounted(async () => {
+  // 检查是否为管理员
+  if (!authStore.isAuthenticated || !authStore.isAdmin) {
+    error.value = '只有管理员可以发布文章'
+    setTimeout(() => router.push('/'), 2000)
+    return
+  }
+
   if (isEdit.value) {
     try {
       const res = await postApi.get(route.params.id)

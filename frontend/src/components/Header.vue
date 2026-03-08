@@ -1,13 +1,24 @@
 <script setup>
-import { ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { computed } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+
+const isAdmin = computed(() => authStore.isAdmin)
+const isAuthenticated = computed(() => authStore.isAuthenticated)
 
 const navLinks = [
   { name: '首页', path: '/' },
   { name: '文章', path: '/posts' },
 ]
+
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/')
+}
 </script>
 
 <template>
@@ -30,8 +41,16 @@ const navLinks = [
       </nav>
 
       <div class="header-actions">
-        <RouterLink to="/editor" class="btn btn-primary">
-          写文章
+        <template v-if="isAuthenticated">
+          <RouterLink v-if="isAdmin" to="/editor" class="btn btn-primary">
+            写文章
+          </RouterLink>
+          <button @click="handleLogout" class="btn btn-secondary">
+            退出
+          </button>
+        </template>
+        <RouterLink v-else to="/login" class="btn btn-primary">
+          登录
         </RouterLink>
       </div>
     </div>

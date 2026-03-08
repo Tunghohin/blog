@@ -1,4 +1,4 @@
-use sea_orm::{Database, DatabaseConnection, DbErr, ConnectionTrait, ExecResult, Statement};
+use sea_orm::{Database, DatabaseConnection, DbErr, ConnectionTrait, Statement};
 
 pub type Db = DatabaseConnection;
 
@@ -14,13 +14,15 @@ pub async fn init_db(db: &Db) -> Result<(), DbErr> {
         r#"
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            author_id INTEGER NOT NULL,
             title VARCHAR(200) NOT NULL,
             slug VARCHAR(200) UNIQUE NOT NULL,
             content TEXT NOT NULL,
             summary VARCHAR(500),
             status VARCHAR(20) DEFAULT 'draft',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (author_id) REFERENCES users(id)
         )
         "#,
     ))
@@ -61,7 +63,25 @@ pub async fn init_db(db: &Db) -> Result<(), DbErr> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username VARCHAR(50) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
+            role VARCHAR(20) DEFAULT 'normal',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    ))
+    .await?;
+
+    // 创建 comments 表
+    db.execute(Statement::from_string(
+        sea_orm::DatabaseBackend::Sqlite,
+        r#"
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER NOT NULL,
+            author_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+            FOREIGN KEY (author_id) REFERENCES users(id)
         )
         "#,
     ))

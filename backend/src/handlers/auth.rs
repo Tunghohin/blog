@@ -23,6 +23,7 @@ pub struct LoginRequest {
 pub struct LoginResponse {
     pub token: String,
     pub username: String,
+    pub role: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,12 +50,16 @@ pub async fn login(
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    let token = create_token(user.id)
+    // 管理员账号判断：用户名为 Tunghohin 则为 admin
+    let role = if user.username == "Tunghohin" { "admin" } else { "normal" };
+
+    let token = create_token(user.id, user.username.clone(), role.to_string())
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(LoginResponse {
         token,
         username: user.username,
+        role: role.to_string(),
     }))
 }
 
@@ -65,10 +70,14 @@ pub async fn register(
     let password_hash = bcrypt::hash(&req.password, bcrypt::DEFAULT_COST)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // 管理员账号判断：用户名为 Tunghohin 则为 admin，其他为 normal
+    let role = if req.username == "Tunghohin" { "admin" } else { "normal" };
+
     let user = user::ActiveModel {
         id: sea_orm::ActiveValue::NotSet,
         username: sea_orm::ActiveValue::Set(req.username.clone()),
         password_hash: sea_orm::ActiveValue::Set(password_hash),
+        role: sea_orm::ActiveValue::Set(role.to_string()),
         created_at: sea_orm::ActiveValue::NotSet,
     };
 
@@ -77,11 +86,12 @@ pub async fn register(
         .await
         .map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let token = create_token(user.id)
+    let token = create_token(user.id, user.username.clone(), role.to_string())
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(LoginResponse {
         token,
         username: user.username,
+        role: role.to_string(),
     }))
 }

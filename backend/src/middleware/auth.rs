@@ -15,6 +15,8 @@ const SECRET_KEY: &str = "your-secret-key-change-in-production";
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: i32, // user id
+    pub username: String,
+    pub role: String,
     pub exp: usize,
 }
 
@@ -42,13 +44,15 @@ pub async fn auth_middleware(
         Ok(token_data) => {
             let mut req = req;
             req.extensions_mut().insert(token_data.claims.sub);
+            req.extensions_mut().insert(token_data.claims.username);
+            req.extensions_mut().insert(token_data.claims.role);
             Ok(next.run(req).await)
         }
         Err(_) => Err(StatusCode::UNAUTHORIZED),
     }
 }
 
-pub fn create_token(user_id: i32) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn create_token(user_id: i32, username: String, role: String) -> Result<String, jsonwebtoken::errors::Error> {
     use chrono::{Utc, Duration};
 
     let expiration = Utc::now()
@@ -58,6 +62,8 @@ pub fn create_token(user_id: i32) -> Result<String, jsonwebtoken::errors::Error>
 
     let claims = Claims {
         sub: user_id,
+        username,
+        role,
         exp: expiration,
     };
 

@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Extension, Path, State},
     http::StatusCode,
     Json,
 };
@@ -81,10 +81,18 @@ pub async fn get_post(
 
 pub async fn create_post(
     State(state): State<Arc<AppState>>,
+    Extension(_username): Extension<String>,
+    Extension(role): Extension<String>,
     Json(req): Json<CreatePostRequest>,
 ) -> Result<Json<PostResponse>, StatusCode> {
+    // 只有管理员可以发布文章
+    if role != "admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
     let new_post = post::ActiveModel {
         id: sea_orm::ActiveValue::NotSet,
+        author_id: sea_orm::ActiveValue::NotSet,
         title: sea_orm::ActiveValue::Set(req.title),
         slug: sea_orm::ActiveValue::Set(req.slug),
         content: sea_orm::ActiveValue::Set(req.content),
@@ -105,9 +113,15 @@ pub async fn create_post(
 
 pub async fn update_post(
     State(state): State<Arc<AppState>>,
+    Extension(role): Extension<String>,
     Path(id): Path<i32>,
     Json(req): Json<UpdatePostRequest>,
 ) -> Result<Json<PostResponse>, StatusCode> {
+    // 只有管理员可以修改文章
+    if role != "admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
     let mut post: post::ActiveModel = post::Entity::find_by_id(id)
         .one(&state.db)
         .await
@@ -141,8 +155,14 @@ pub async fn update_post(
 
 pub async fn delete_post(
     State(state): State<Arc<AppState>>,
+    Extension(role): Extension<String>,
     Path(id): Path<i32>,
 ) -> Result<(), StatusCode> {
+    // 只有管理员可以删除文章
+    if role != "admin" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
     let post: post::ActiveModel = post::Entity::find_by_id(id)
         .one(&state.db)
         .await

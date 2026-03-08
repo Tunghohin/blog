@@ -53,6 +53,7 @@ async fn main() {
     let public_routes = Router::new()
         .route("/api/posts", get(handlers::list_posts))
         .route("/api/posts/:id", get(handlers::get_post))
+        .route("/api/posts/:id/comments", get(handlers::list_comments))
         .route("/api/auth/login", post(handlers::login))
         .route("/api/auth/register", post(handlers::register));
 
@@ -61,6 +62,8 @@ async fn main() {
         .route("/api/posts", post(handlers::create_post))
         .route("/api/posts/:id", put(handlers::update_post))
         .route("/api/posts/:id", delete(handlers::delete_post))
+        .route("/api/posts/:id/comments", post(handlers::create_comment))
+        .route("/api/comments/:id", delete(handlers::delete_comment))
         .layer(axum::middleware::from_fn_with_state(state.clone(), auth_middleware));
 
     let app = public_routes

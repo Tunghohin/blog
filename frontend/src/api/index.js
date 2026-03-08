@@ -52,3 +52,20 @@ export const authApi = {
     return api.post('/auth/register', { username, password })
   },
 }
+
+export const commentApi = {
+  // 获取文章评论列表
+  list(postId) {
+    return api.get(`/posts/${postId}/comments`)
+  },
+
+  // 创建评论
+  create(postId, content) {
+    return api.post(`/posts/${postId}/comments`, { content })
+  },
+
+  // 删除评论
+  delete(id) {
+    return api.delete(`/comments/${id}`)
+  },
+}

@@ -1,10 +1,12 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import { authApi } from '../api'
 import Header from '../components/Header.vue'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const form = ref({
   username: '',
@@ -20,7 +22,11 @@ const handleSubmit = async () => {
 
   try {
     const res = await authApi.login(form.value.username, form.value.password)
-    localStorage.setItem('token', res.data.token)
+    // 保存用户信息到 store
+    authStore.setUser({
+      username: res.data.username,
+      role: res.data.role,
+    })
     router.push('/')
   } catch (err) {
     error.value = '登录失败，请检查用户名和密码'
