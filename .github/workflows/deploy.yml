@@ -44,16 +44,32 @@ jobs:
           deploy/blog-api.service \
           deploy/nginx.conf
 
+    - name: Debug Secrets
+      run: |
+        echo "Checking if secrets are loaded..."
+        if [ -z "${{ secrets.ECS_HOST }}" ]; then
+          echo "::error::ECS_HOST secret is empty!"
+          exit 1
+        fi
+        if [ -z "${{ secrets.ECS_USER }}" ]; then
+          echo "::error::ECS_USER secret is empty!"
+          exit 1
+        fi
+        if [ -z "${{ secrets.ECS_SSH_KEY }}" ]; then
+          echo "::error::ECS_SSH_KEY secret is empty!"
+          exit 1
+        fi
+        echo "All secrets loaded successfully!"
+
     - name: Deploy to ECS via SSH
-      uses: easingthemes/ssh-deploy@v4
+      uses: easingthemes/ssh-deploy@main
       with:
-        SSH_PRIVATE_KEY: ${{ secrets.ECS_SSH_KEY }}
-        REMOTE_HOST: ${{ secrets.ECS_HOST }}
-        REMOTE_USER: ${{ secrets.ECS_USER }}
+        SSH_PRIVATE_KEY: "${{ secrets.ECS_SSH_KEY }}"
+        REMOTE_HOST: "${{ secrets.ECS_HOST }}"
+        REMOTE_USER: "${{ secrets.ECS_USER }}"
         REMOTE_PORT: "22"
         SOURCE: "blog-release.tar.gz"
         TARGET: "/tmp"
-        ARGS: "-rltgoDzvO"
         SCRIPT_AFTER: |
           echo "Extracting release..."
           mkdir -p /opt/blog/backend/target/release
