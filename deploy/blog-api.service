@@ -6,9 +6,9 @@ After=network.target
 Type=simple
 User=www-data
 WorkingDirectory=/opt/blog
-Environment=DATABASE_URL=sqlite:/opt/blog/data/blog.db?mode=rwc
+Environment=DATABASE_URL=sqlite:/opt/blog/backend/blog.db?mode=rwc
 Environment=RUST_LOG=info
-ExecStart=/opt/blog/bin/blog-backend
+ExecStart=/opt/blog/backend/target/release/blog-backend
 Restart=always
 RestartSec=10
 StandardOutput=append:/opt/blog/logs/api.log

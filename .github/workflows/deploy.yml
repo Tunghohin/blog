@@ -43,6 +43,7 @@ jobs:
           backend/target/release/blog-backend \
           frontend/dist \
           deploy/blog-api.service \
+          deploy/blog.service \
           deploy/nginx.conf
 
     - name: Debug Secrets
@@ -75,20 +76,23 @@ jobs:
           echo "Extracting release..."
           mkdir -p /opt/blog/backend/target/release
           mkdir -p /opt/blog/frontend
+          mkdir -p /opt/blog/logs
           tar -xzf /tmp/blog-release.tar.gz -C /opt/blog
 
+          echo "Installing systemd services..."
+          cp /opt/blog/deploy/blog-api.service /etc/systemd/system/
+          cp /opt/blog/deploy/blog.service /etc/systemd/system/
+
           echo "Setting up Nginx..."
-          # 备份原配置
-          cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak || true
-          # 复制新配置
           cp /opt/blog/deploy/nginx.conf /etc/nginx/nginx.conf
-          # 测试并重启
           nginx -t && systemctl restart nginx
 
           echo "Starting services..."
           systemctl daemon-reload
           systemctl restart blog-api || systemctl start blog-api
           systemctl enable blog-api
+          systemctl restart blog || systemctl start blog
+          systemctl enable blog
 
           echo "Cleanup..."
           rm -f /tmp/blog-release.tar.gz
