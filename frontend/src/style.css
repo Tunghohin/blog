@@ -1,9 +1,9 @@
+/* Import fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* Base styles */
 :root {
@@ -21,6 +21,12 @@
   --color-success: #22c55e;
   --color-error: #ef4444;
   --color-warning: #f59e0b;
+  --color-success-light: rgba(34, 197, 94, 0.1);
+  --color-error-light: rgba(239, 68, 68, 0.1);
+  --color-warning-light: rgba(245, 158, 11, 0.1);
+  --color-accent-ring: rgba(99, 102, 241, 0.2);
+  --color-accent-border: rgba(99, 102, 241, 0.3);
+  --color-bg-glass: rgba(255, 255, 255, 0.8);
 
   --transition-fast: 150ms;
   --transition-normal: 200ms;
@@ -47,6 +53,12 @@
   --color-success: #4ade80;
   --color-error: #f87171;
   --color-warning: #fbbf24;
+  --color-success-light: rgba(74, 222, 128, 0.1);
+  --color-error-light: rgba(248, 113, 113, 0.1);
+  --color-warning-light: rgba(251, 191, 36, 0.1);
+  --color-accent-ring: rgba(129, 140, 248, 0.2);
+  --color-accent-border: rgba(129, 140, 248, 0.3);
+  --color-bg-glass: rgba(15, 23, 42, 0.8);
 }
 
 * {
@@ -134,7 +146,11 @@ input, textarea, select {
   }
 
   .card-hover {
-    @apply hover:border-theme-accent/30 hover:-translate-y-1;
+    @apply hover:-translate-y-1;
+    border-color: var(--color-accent-border);
+  }
+  .card:hover {
+    border-color: var(--color-accent-border);
   }
 
   .btn {
@@ -167,7 +183,10 @@ input, textarea, select {
     @apply bg-theme-bg-secondary border border-theme-border;
     @apply text-theme-text placeholder:text-theme-text-muted;
     @apply transition-all duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-theme-accent/20 focus:border-theme-accent;
+    @apply focus:outline-none focus:border-theme-accent;
+  }
+  .input-field:focus {
+    box-shadow: 0 0 0 2px var(--color-accent-ring);
   }
 
   .prose-app {
@@ -232,20 +251,24 @@ input, textarea, select {
   }
 
   .badge-success {
-    @apply bg-theme-success/10 text-theme-success;
+    background-color: var(--color-success-light);
+    color: var(--color-success);
   }
 
   .badge-warning {
-    @apply bg-theme-warning/10 text-theme-warning;
+    background-color: var(--color-warning-light);
+    color: var(--color-warning);
   }
 
   .badge-error {
-    @apply bg-theme-error/10 text-theme-error;
+    background-color: var(--color-error-light);
+    color: var(--color-error);
   }
 
   /* Glass effect */
   .glass {
-    @apply backdrop-blur-md bg-theme-bg/80;
+    @apply backdrop-blur-md;
+    background-color: var(--color-bg-glass);
   }
 
   /* Gradient text */
