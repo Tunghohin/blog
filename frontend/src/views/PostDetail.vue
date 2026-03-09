@@ -58,6 +58,26 @@ const handleDeleteComment = async (id) => {
   }
 }
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 onMounted(async () => {
   authStore.init()
   try {
@@ -73,315 +93,127 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="post-detail">
+  <div class="min-h-screen bg-theme-bg">
     <Header />
 
-    <main class="main">
-      <div class="container">
-        <RouterLink to="/posts" class="back-link">
-          &larr; 返回
+    <main class="pt-24 pb-16">
+      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Back Link -->
+        <RouterLink to="/posts" class="inline-flex items-center gap-2 text-theme-text-secondary hover:text-theme-text mb-8 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          返回文章列表
         </RouterLink>
 
-        <div v-if="loading" class="loading">加载中...</div>
+        <!-- Loading State -->
+        <div v-if="loading" class="animate-pulse">
+          <div class="skeleton h-10 w-3/4 mb-4"></div>
+          <div class="skeleton h-4 w-48 mb-8"></div>
+          <div class="card p-8">
+            <div class="skeleton h-4 w-full mb-4"></div>
+            <div class="skeleton h-4 w-full mb-4"></div>
+            <div class="skeleton h-4 w-2/3 mb-4"></div>
+          </div>
+        </div>
 
-        <article v-else-if="post" class="article">
-          <h1 class="article-title">{{ post.title }}</h1>
+        <!-- Article -->
+        <article v-else-if="post" class="animate-fade-in">
+          <!-- Article Header -->
+          <header class="mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-theme-text mb-4">{{ post.title }}</h1>
+            <div class="flex flex-wrap items-center gap-4 text-sm text-theme-text-secondary">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>{{ formatDate(post.created_at) }}</span>
+              </div>
+              <span
+                class="badge"
+                :class="post.status === 'published' ? 'badge-primary' : 'badge-warning'"
+              >
+                {{ post.status === 'published' ? '已发布' : '草稿' }}
+              </span>
+            </div>
+          </header>
 
-          <div class="article-meta">
-            <span class="date">
-              {{ new Date(post.created_at).toLocaleDateString('zh-CN') }}
-            </span>
-            <span class="status">{{ post.status === 'published' ? '已发布' : '草稿' }}</span>
+          <!-- Article Content -->
+          <div class="card p-6 sm:p-8 mb-8">
+            <div class="prose-app" v-html="htmlContent"></div>
           </div>
 
-          <div class="article-content markdown-body" v-html="htmlContent"></div>
+          <!-- Comments Section -->
+          <section class="card p-6 sm:p-8">
+            <div class="flex items-center gap-2 mb-6">
+              <svg class="w-5 h-5 text-theme-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <h2 class="text-xl font-semibold text-theme-text">
+                评论
+                <span class="text-theme-text-muted font-normal">({{ comments.length }})</span>
+              </h2>
+            </div>
+
+            <!-- Comment Form -->
+            <div v-if="isAuthenticated" class="mb-6">
+              <textarea
+                v-model="newComment"
+                placeholder="写下你的评论..."
+                rows="4"
+                class="input-field resize-none mb-3"
+              ></textarea>
+              <button
+                @click="handleSubmitComment"
+                :disabled="submitting || !newComment.trim()"
+                class="btn btn-primary"
+              >
+                <svg v-if="submitting" class="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ submitting ? '提交中...' : '发表评论' }}
+              </button>
+            </div>
+
+            <div v-else class="mb-6 p-4 rounded-lg bg-theme-bg-secondary text-center">
+              <p class="text-theme-text-secondary mb-3">登录后才能发表评论</p>
+              <RouterLink to="/login" class="btn btn-primary">
+                登录
+              </RouterLink>
+            </div>
+
+            <!-- Comments List -->
+            <div class="space-y-4">
+              <div
+                v-for="comment in comments"
+                :key="comment.id"
+                class="p-4 rounded-lg bg-theme-bg-secondary"
+              >
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
+                      <span class="text-white text-xs font-medium">{{ comment.author_name?.charAt(0).toUpperCase() }}</span>
+                    </div>
+                    <span class="font-medium text-theme-text">{{ comment.author_name }}</span>
+                  </div>
+                  <span class="text-xs text-theme-text-muted">{{ formatDateTime(comment.created_at) }}</span>
+                </div>
+                <p class="text-theme-text-secondary text-sm leading-relaxed pl-10">{{ comment.content }}</p>
+              </div>
+
+              <div v-if="comments.length === 0" class="py-8 text-center">
+                <p class="text-theme-text-muted">暂无评论，快来抢沙发吧</p>
+              </div>
+            </div>
+          </section>
         </article>
 
-        <!-- 评论区 -->
-        <div v-if="post" class="comments-section">
-          <h2 class="comments-title">评论 ({{ comments.length }})</h2>
-
-          <!-- 发表评论 -->
-          <div v-if="isAuthenticated" class="comment-form">
-            <textarea
-              v-model="newComment"
-              placeholder="写下你的评论..."
-              rows="4"
-              class="comment-input"
-            ></textarea>
-            <button
-              @click="handleSubmitComment"
-              :disabled="submitting || !newComment.trim()"
-              class="btn btn-primary"
-            >
-              {{ submitting ? '提交中...' : '发表评论' }}
-            </button>
-          </div>
-
-          <div v-else class="login提示">
-            <RouterLink to="/login" class="btn btn-primary">登录</RouterLink>
-            <p>需要登录后才能发表评论</p>
-          </div>
-
-          <!-- 评论列表 -->
-          <div class="comments-list">
-            <div
-              v-for="comment in comments"
-              :key="comment.id"
-              class="comment-item"
-            >
-              <div class="comment-header">
-                <span class="comment-author">{{ comment.author_name }}</span>
-                <span class="comment-date">
-                  {{ new Date(comment.created_at).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }}
-                </span>
-              </div>
-              <div class="comment-content">{{ comment.content }}</div>
-            </div>
-            <div v-if="comments.length === 0" class="no-comments">
-              暂无评论，快来抢沙发吧
-            </div>
-          </div>
+        <!-- Not Found -->
+        <div v-else class="card p-12 text-center">
+          <p class="text-theme-text-secondary">文章不存在或已被删除</p>
         </div>
       </div>
     </main>
   </div>
 </template>
-
-<style scoped>
-.post-detail {
-  min-height: 100vh;
-  background-color: #151515;
-}
-
-.main {
-  padding-top: 80px;
-}
-
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem;
-}
-
-.back-link {
-  display: inline-block;
-  color: #888;
-  text-decoration: none;
-  margin-bottom: 1.5rem;
-  transition: color 0.2s;
-}
-
-.back-link:hover {
-  color: #3b82f6;
-}
-
-.loading {
-  text-align: center;
-  color: #888;
-  padding: 4rem 0;
-}
-
-.article {
-  background-color: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 2rem;
-}
-
-.article-title {
-  font-size: 2rem;
-  margin: 0 0 1rem 0;
-  color: #fff;
-}
-
-.article-meta {
-  display: flex;
-  gap: 1rem;
-  color: #888;
-  font-size: 0.9rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #333;
-}
-
-.article-content {
-  color: #ccc;
-  line-height: 1.8;
-}
-
-.article-content :deep(h1),
-.article-content :deep(h2),
-.article-content :deep(h3),
-.article-content :deep(h4),
-.article-content :deep(h5),
-.article-content :deep(h6) {
-  color: #fff;
-  margin-top: 2em;
-  margin-bottom: 0.5em;
-}
-
-.article-content :deep(h1):first-child {
-  margin-top: 0;
-}
-
-.article-content :deep(p) {
-  margin: 1em 0;
-}
-
-.article-content :deep(a) {
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.article-content :deep(a):hover {
-  text-decoration: underline;
-}
-
-.article-content :deep(code) {
-  background-color: #2d2d2d;
-  padding: 0.2em 0.4em;
-  border-radius: 4px;
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
-  font-size: 0.9em;
-}
-
-.article-content :deep(pre) {
-  background-color: #2d2d2d;
-  padding: 1rem;
-  border-radius: 8px;
-  overflow-x: auto;
-  margin: 1.5em 0;
-}
-
-.article-content :deep(pre code) {
-  background: none;
-  padding: 0;
-}
-
-.article-content :deep(ul),
-.article-content :deep(ol) {
-  padding-left: 1.5em;
-}
-
-.article-content :deep(blockquote) {
-  border-left: 4px solid #3b82f6;
-  margin: 1.5em 0;
-  padding-left: 1em;
-  color: #888;
-}
-
-.article-content :deep(img) {
-  max-width: 100%;
-  border-radius: 8px;
-}
-
-.comments-section {
-  margin-top: 2rem;
-  background-color: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 2rem;
-}
-
-.comments-title {
-  font-size: 1.5rem;
-  margin: 0 0 1.5rem 0;
-  color: #fff;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #333;
-}
-
-.comment-form {
-  margin-bottom: 2rem;
-}
-
-.comment-input {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: #2d2d2d;
-  border: 1px solid #333;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 1rem;
-  font-family: inherit;
-  resize: vertical;
-  margin-bottom: 1rem;
-}
-
-.comment-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-
-.login-tip {
-  color: #888;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem 0;
-}
-
-.comments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.comment-item {
-  background-color: #2d2d2d;
-  border-radius: 6px;
-  padding: 1rem;
-}
-
-.comment-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.comment-author {
-  color: #fff;
-  font-weight: 500;
-}
-
-.comment-date {
-  color: #888;
-  font-size: 0.85rem;
-}
-
-.comment-content {
-  color: #ccc;
-  line-height: 1.6;
-  word-break: break-word;
-}
-
-.no-comments {
-  text-align: center;
-  color: #888;
-  padding: 2rem 0;
-}
-
-.btn {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.btn-primary {
-  background-color: #3b82f6;
-  color: #fff;
-}
-
-.btn-primary:hover {
-  background-color: #2563eb;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>
