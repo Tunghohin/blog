@@ -11,6 +11,7 @@ use axum::{
 use clap::{Parser, Subcommand};
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -150,13 +151,18 @@ async fn main() {
         .route("/api/posts/:id", delete(handlers::delete_post))
         .route("/api/posts/:id/comments", post(handlers::create_comment))
         .route("/api/comments/:id", delete(handlers::delete_comment))
+        .route("/api/upload", post(handlers::upload_image))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
         ));
 
+    // 静态文件服务（uploads 目录）
+    let static_service = ServeDir::new("uploads");
+
     let app = public_routes
         .merge(protected_routes)
+        .nest_service("/uploads", static_service)
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state);

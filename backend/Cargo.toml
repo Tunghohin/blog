@@ -5,10 +5,10 @@ edition = "2021"
 
 [dependencies]
 # Web 框架
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.7", features = ["macros", "multipart"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
 
 # 数据库
 sea-orm = { version = "0.12", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
@@ -34,6 +34,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 clap = { version = "4", features = ["derive"] }
 rpassword = "7"
 atty = "0.2"
+mime_guess = "2.0"
+futures-util = "0.3"
 
 # 开发环境
 [dev-dependencies]

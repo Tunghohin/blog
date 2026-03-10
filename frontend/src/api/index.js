@@ -69,3 +69,16 @@ export const commentApi = {
     return api.delete(`/comments/${id}`)
   },
 }
+
+export const uploadApi = {
+  // 上传图片
+  uploadImage(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  },
+}
