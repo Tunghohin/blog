@@ -93,15 +93,21 @@ jobs:
           sed "s/\${JWT_SECRET}/$JWT_SECRET/g" /opt/blog/deploy/blog-api.service > /etc/systemd/system/blog-api.service
           cp /opt/blog/deploy/blog.service /etc/systemd/system/
 
+          echo "Stopping old services..."
+          systemctl stop blog || true
+          systemctl stop blog-api || true
+          killall nginx 2>/dev/null || true
+          sleep 2
+
           echo "Setting up Nginx..."
           cp /opt/blog/deploy/nginx.conf /etc/nginx/nginx.conf
-          nginx -t && systemctl restart nginx
+          nginx -t && systemctl start nginx
 
           echo "Starting services..."
           systemctl daemon-reload
-          systemctl restart blog-api || systemctl start blog-api
+          systemctl start blog-api
           systemctl enable blog-api
-          systemctl restart blog || systemctl start blog
+          systemctl start blog
           systemctl enable blog
 
           echo "Waiting for service to start..."
