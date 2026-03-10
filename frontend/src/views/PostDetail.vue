@@ -4,6 +4,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { postApi, commentApi } from '../api'
 import Header from '../components/Header.vue'
+import CommentItem from '../components/CommentItem.vue'
 import markdownit from 'markdown-it'
 
 const route = useRoute()
@@ -47,34 +48,12 @@ const handleSubmitComment = async () => {
   }
 }
 
-const handleDeleteComment = async (id) => {
-  if (!confirm('确定要删除这条评论吗？')) return
-
-  try {
-    await commentApi.delete(id)
-    await loadComments()
-  } catch (error) {
-    console.error('Failed to delete comment:', error)
-  }
-}
-
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  })
-}
-
-const formatDateTime = (dateStr) => {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
   })
 }
 
@@ -184,23 +163,13 @@ onMounted(async () => {
             </div>
 
             <!-- Comments List -->
-            <div class="space-y-4">
-              <div
+            <div class="space-y-2">
+              <CommentItem
                 v-for="comment in comments"
                 :key="comment.id"
-                class="p-4 rounded-lg bg-theme-bg-secondary"
-              >
-                <div class="flex items-start justify-between mb-2">
-                  <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
-                      <span class="text-white text-xs font-medium">{{ comment.author_name?.charAt(0).toUpperCase() }}</span>
-                    </div>
-                    <span class="font-medium text-theme-text">{{ comment.author_name }}</span>
-                  </div>
-                  <span class="text-xs text-theme-text-muted">{{ formatDateTime(comment.created_at) }}</span>
-                </div>
-                <p class="text-theme-text-secondary text-sm leading-relaxed pl-10">{{ comment.content }}</p>
-              </div>
+                :comment="comment"
+                @refresh="loadComments"
+              />
 
               <div v-if="comments.length === 0" class="py-8 text-center">
                 <p class="text-theme-text-muted">暂无评论，快来抢沙发吧</p>

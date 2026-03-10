@@ -9,6 +9,7 @@ pub struct Model {
     pub post_id: i32,
     pub author_id: i32,
     pub content: String,
+    pub parent_id: Option<i32>,
     pub created_at: Option<String>,
 }
 

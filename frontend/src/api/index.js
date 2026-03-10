@@ -60,8 +60,8 @@ export const commentApi = {
   },
 
   // 创建评论
-  create(postId, content) {
-    return api.post(`/posts/${postId}/comments`, { content })
+  create(postId, content, parentId = null) {
+    return api.post(`/posts/${postId}/comments`, { content, parent_id: parentId })
   },
 
   // 删除评论
